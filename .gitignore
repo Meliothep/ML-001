@@ -49,6 +49,8 @@ include/divisible/*
 
 build/**/*
 
+cmake-build-debug-visual-studio
+
 include/*
 lib/*
 bin/*

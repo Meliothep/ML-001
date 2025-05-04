@@ -9,5 +9,4 @@ First of all, thanks to **@kigster** for this beautiful template :
 
 - Download a version of libtorch like said here : https://pytorch.org/get-started/locally/
 - Link to libtorch to the project : 
-  - Unzip in lib folder so you optain : lib/libtorch
-  - In src/mllogic/CMakeLists.txt change `Torch_DIR` to your current libtorch path
+  - add the argument : `-DCMAKE_PREFIX_PATH="<path to libtorch/share/cmake>"` to your cmake command
