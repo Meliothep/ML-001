@@ -50,6 +50,7 @@ include/divisible/*
 build/**/*
 
 cmake-build-debug-visual-studio
+cmake-build-release-visual-studio
 
 include/*
 lib/*

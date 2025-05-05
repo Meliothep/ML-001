@@ -3,6 +3,23 @@
 
 #include <torch/torch.h>
 
+
+class ModelTrainer {
+private:
+
+public:
+    ModelTrainer() {
+
+    };
+    virtual ~ModelTrainer() {};
+};
+
+template<typename T, typename std::enable_if<std::is_base_of<torch::nn::Module, T>::value>::type* = nullptr>
+T Foo(T bar)
+{
+    return T();
+}
+
 // Function to train the model
 template <typename DataLoader, typename Model>
 void train(
