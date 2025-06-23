@@ -5,65 +5,38 @@
 #ifndef DATAEXPORT_H
 #define DATAEXPORT_H
 
-#include <arrow/api.h>
-#include <arrow/io/api.h>
-#include <parquet/arrow/writer.h>
-
 #include <iostream>
-#include <memory>
+#include "Logger.h"
 #include <string>
 #include <vector>
 
-namespace dataexport {
+struct EpochMetrics {
+  int epoch;
+  float train_loss;
+  float test_loss;
+  float accuracy;
+};
 
-  /**
-   * A test function that writes sample data to a Parquet file using Arrow C++
-   * @param output_path Path where the Parquet file will be written
-   * @return arrow::Status indicating success or error
-   */
-  arrow::Status WriteParquetTest(const std::string& output_path) {
-    // Create schema for our data
-    std::shared_ptr<arrow::Schema> schema = arrow::schema({
-      arrow::field("id", arrow::int32()),
-      arrow::field("name", arrow::utf8()),
-      arrow::field("value", arrow::float64())
-    });
+struct PredictionSample {
+  int epoch;
+  int sample_index;
+  int predicted_label;
+  int true_label;
+  float confidence;
+  std::vector<float> embedding; // for projection maps like t-SNE
+};
 
-    // Create builders for each column
-    arrow::Int32Builder id_builder;
-    arrow::StringBuilder name_builder;
-    arrow::DoubleBuilder value_builder;
+class DataExporter {
+protected :
+  std::string output_path_;
+  std::shared_ptr<Logger> logger_;
 
-    // Add data to builders
-    for (int i = 0; i < 5; ++i) {
-      ARROW_RETURN_NOT_OK(id_builder.Append(i));
-      ARROW_RETURN_NOT_OK(name_builder.Append("test_" + std::to_string(i)));
-      ARROW_RETURN_NOT_OK(value_builder.Append(i * 1.5));
-    }
+public:
+  virtual ~DataExporter() = default;
 
-    // Finalize arrays
-    std::shared_ptr<arrow::Array> id_array;
-    ARROW_RETURN_NOT_OK(id_builder.Finish(&id_array));
+  explicit DataExporter(std::string output_path, std::shared_ptr<Logger> logger) : output_path_(output_path), logger_(logger) {}
 
-    std::shared_ptr<arrow::Array> name_array;
-    ARROW_RETURN_NOT_OK(name_builder.Finish(&name_array));
-
-    std::shared_ptr<arrow::Array> value_array;
-    ARROW_RETURN_NOT_OK(value_builder.Finish(&value_array));
-
-    // Create table
-    std::shared_ptr<arrow::Table> table = arrow::Table::Make(schema, {id_array, name_array, value_array});
-
-    // Open output file
-    ARROW_ASSIGN_OR_RAISE(auto outfile, arrow::io::FileOutputStream::Open(output_path));
-
-    // Write to Parquet
-    ARROW_RETURN_NOT_OK(parquet::arrow::WriteTable(*table, arrow::default_memory_pool(), outfile, 1024));
-
-    std::cout << "Successfully wrote Parquet file to: " << output_path << std::endl;
-    return arrow::Status::OK();
-  }
-
-} // namespace dataexport
-
+  virtual int ExportEpochMetrics(std::string output_file, const std::vector<EpochMetrics>& metrics) = 0;
+  virtual int ExportPredictions(std::string output_file, const std::vector<PredictionSample>& samples) = 0;
+};
 #endif // DATAEXPORT_H

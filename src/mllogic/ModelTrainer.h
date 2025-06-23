@@ -2,98 +2,64 @@
 #define CMAKE_MODELTRAINER_H
 
 #include <torch/torch.h>
+#include "GenericDataset.h"
+#include "Logger.h"
+#include "DataExport.h"
+#include <vector>
 
-
+template<typename Model, typename Dataset>
 class ModelTrainer {
-private:
-
 public:
-    ModelTrainer() {
+    ModelTrainer(std::string data_dir,
+                 std::shared_ptr<DataExporter> data_exporter,
+                 std::shared_ptr<Logger> logger);
 
-    };
-    virtual ~ModelTrainer() {};
+    virtual ~ModelTrainer() = default;
+
+    /// Runs full training/testing loop and exports data.
+    int start();
+
+    /// Saves model weights to `<model_name>.pt`
+    void save();
+
+private:
+    // core state
+    std::shared_ptr<Model>           model_;
+    std::string                      data_dir_;
+    std::shared_ptr<Logger>          logger_;
+    std::shared_ptr<DataExporter>    data_exporter_;
+
+    // logging
+    std::vector<EpochMetrics>        metrics_;
+    std::vector<PredictionSample>    predictions_;
+
+    // train / test routines
+    template<typename DataLoader>
+    void train(std::shared_ptr<Model> model,
+               torch::Device device,
+               DataLoader& loader,
+               torch::optim::Optimizer& optimizer,
+               size_t epoch,
+               size_t dataset_size);
+
+    template<typename DataLoader>
+    void test(std::shared_ptr<Model> model,
+              torch::Device device,
+              DataLoader& loader,
+              size_t dataset_size,
+              size_t epoch,
+              float& out_test_loss,
+              float& out_accuracy);
+
+    // per-sample logging
+    void log_predictions(
+                         size_t epoch,
+                         const torch::Tensor& preds,
+                         const torch::Tensor& targets,
+                         const torch::Tensor& probs,
+                         const torch::Tensor& embeddings,
+                         int& sample_index);
 };
 
-template<typename T, typename std::enable_if<std::is_base_of<torch::nn::Module, T>::value>::type* = nullptr>
-T Foo(T bar)
-{
-    return T();
-}
-
-// Function to train the model
-template <typename DataLoader, typename Model>
-void train(
-    std::shared_ptr<Model> model,
-    torch::Device device,
-    DataLoader& data_loader,
-    torch::optim::Optimizer& optimizer,
-    size_t epoch,
-    size_t dataset_size) {
-   
-    model->train();
-    size_t batch_idx = 0;
-    float running_loss = 0.0;
-    
-    // Calculate total number of batches
-    size_t total_batches = std::ceil(static_cast<float>(dataset_size) / data_loader.options().batch_size);
-   
-    for (auto& batch : data_loader) {
-        auto data = batch.data.to(device);
-        auto target = batch.target.to(device);
-       
-        optimizer.zero_grad();
-        auto output = model->forward(data);
-        auto loss = torch::nll_loss(output, target);
-       
-        loss.backward();
-        optimizer.step();
-       
-        running_loss += loss.item<float>();
-       
-        if (batch_idx % 100 == 0) {
-            std::cout << "Train Epoch: " << epoch << " ["
-                      << batch_idx * batch.data.size(0) << "/" << dataset_size
-                      << " (" << 100. * batch_idx / total_batches << "%)]"
-                      << "\tLoss: " << loss.item<float>() << std::endl;
-        }
-       
-        batch_idx++;
-    }
-   
-    std::cout << "Train Epoch: " << epoch << " complete, Avg Loss: "
-              << running_loss / batch_idx << std::endl;
-}
-
-// Function to test the model
-template <typename DataLoader, typename Model>
-void test(
-    std::shared_ptr<Model> model,
-    torch::Device device,
-    DataLoader& data_loader,
-    size_t dataset_size) {
-    
-    model->eval();
-    float test_loss = 0;
-    int32_t correct = 0;
-    
-    torch::NoGradGuard no_grad;
-    
-    for (const auto& batch : data_loader) {
-        auto data = batch.data.to(device);
-        auto target = batch.target.to(device);
-        
-        auto output = model->forward(data);
-        test_loss += torch::nll_loss(output, target, {}, torch::Reduction::Sum).item<float>();
-        
-        auto pred = output.argmax(1);
-        correct += pred.eq(target).sum().template item<int64_t>();
-    }
-    
-    test_loss /= dataset_size;
-    
-    std::cout << "Test set: Average loss: " << test_loss 
-              << ", Accuracy: " << correct << "/" << dataset_size
-              << " (" << 100.0 * correct / dataset_size << "%)" << std::endl;
-}
-
+#include "ModelTrainer.cpp"  // include template definitions
 #endif

@@ -1,6 +1,6 @@
-#include "CNN.h"
+#include "MNISTCNN.h"
 
-Net::Net()
+MNISTCNN::MNISTCNN()
     : conv1(torch::nn::Conv2dOptions(1, 10, /*kernel_size=*/5)),
       conv2(torch::nn::Conv2dOptions(10, 20, /*kernel_size=*/5)),
       conv2_drop(), // Initialize before registering
@@ -14,7 +14,7 @@ Net::Net()
     register_module("fc2", fc2);
 }
 
-torch::Tensor Net::forward(torch::Tensor x)
+torch::Tensor MNISTCNN::forward(torch::Tensor x)
 {
     x = torch::relu(torch::max_pool2d(conv1->forward(x), 2));
     x = torch::relu(
@@ -22,6 +22,7 @@ torch::Tensor Net::forward(torch::Tensor x)
     x = x.view({-1, 320});
     x = torch::relu(fc1->forward(x));
     x = torch::dropout(x, /*p=*/0.5, /*training=*/is_training());
+    embedding_ = x.clone();
     x = fc2->forward(x);
     return torch::log_softmax(x, /*dim=*/1);
 }

@@ -1,24 +1,38 @@
 cmake_minimum_required(VERSION 3.25)
+cmake_policy(VERSION 3.25)
+cmake_policy(SET CMP0074 NEW)  # Fix OpenCV_ROOT warning
+
 project(ML001)
 
+# Force Protobuf to be found first to prevent partial target registration
+find_package(Protobuf CONFIG REQUIRED)
+
+# Torch
 find_package(Torch CONFIG REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
+# Arrow / Parquet
 find_package(Arrow CONFIG REQUIRED)
 find_package(Parquet CONFIG REQUIRED)
+
+# OpenCV
+find_package(OpenCV REQUIRED)
 
 add_subdirectory(mllogic)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h" "*.hpp")
+add_executable(ML001 ${SOURCES} ${HEADERS})
 
-set(SOURCE_FILES ${SOURCES} ${HEADERS} )
+add_compile_definitions(NOMINMAX)
 
-add_executable(ML001 ${SOURCE_FILES})
-
-target_link_libraries(ML001 PRIVATE "$<IF:$<BOOL:${ARROW_BUILD_STATIC}>,Arrow::arrow_static,Arrow::arrow_shared>")
-target_link_libraries(ML001 PRIVATE "$<IF:$<BOOL:${ARROW_BUILD_STATIC}>,Parquet::parquet_static,Parquet::parquet_shared>")
-target_link_libraries(ML001 PRIVATE "${TORCH_LIBRARIES}" mllogic)
+target_link_libraries(ML001 PRIVATE
+        "$<IF:$<BOOL:${ARROW_BUILD_STATIC}>,Arrow::arrow_static,Arrow::arrow_shared>"
+        "$<IF:$<BOOL:${ARROW_BUILD_STATIC}>,Parquet::parquet_static,Parquet::parquet_shared>"
+        "${TORCH_LIBRARIES}"
+        "${OpenCV_LIBS}"
+        mllogic
+)
 
 set_property(TARGET ML001 PROPERTY CXX_STANDARD 17)
 
@@ -28,6 +42,6 @@ if (MSVC)
             POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${TORCH_DLLS}
-            $<TARGET_FILE_DIR:ML001>)
-endif (MSVC)
-
+            $<TARGET_FILE_DIR:ML001>
+    )
+endif()

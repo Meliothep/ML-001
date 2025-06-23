@@ -10,9 +10,9 @@ file(GLOB HEADERS "*.h" "*.hpp")
 set(SOURCE_FILES ${SOURCES} ${HEADERS} )
 
 add_library(mllogic STATIC ${SOURCE_FILES})
+
 target_link_libraries(mllogic PRIVATE "$<IF:$<BOOL:${ARROW_BUILD_STATIC}>,Arrow::arrow_static,Arrow::arrow_shared>")
 target_link_libraries(mllogic PRIVATE "$<IF:$<BOOL:${ARROW_BUILD_STATIC}>,Parquet::parquet_static,Parquet::parquet_shared>")
-
 target_link_libraries(mllogic PRIVATE "${TORCH_LIBRARIES}")
 
 set_property(TARGET mllogic PROPERTY CXX_STANDARD 17)

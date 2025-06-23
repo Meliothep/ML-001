@@ -4,23 +4,14 @@
 #include <cstdint>
 #include "mllogic/utils.hpp"
 
-namespace {
-    // Put these in anonymous namespace to limit their scope to this file
-    const std::string trainPrefix = "train";
-    const std::string testPrefix = "t10k";
-}
+const std::string trainPrefix = "train";
+const std::string testPrefix = "t10k";
 
-MNISTDataset::MNISTDataset(const std::string &loc_data, bool isTrain)
-    : GenericDataset(loc_data, isTrain)
+void MNISTDataset::read_data(const std::string loc, bool isTrain)
 {
-    // Call initialize after construction
-    initialize(loc_data, isTrain);
-}
+    std::cout << "MNISTDataset::read_data" << std::endl;
 
-torch::Tensor MNISTDataset::read_data(const std::string &loc, bool isTrain)
-{
-    // Load images
-    std::string path = loc + (isTrain ? trainPrefix : testPrefix) + "-images.idx3-ubyte";
+    std::string path = loc + "/" + (isTrain ? trainPrefix : testPrefix) + "-images.idx3-ubyte";
     std::ifstream images(path, std::ios::binary);
     TORCH_CHECK(images, "Error opening images file at ", path);
 
@@ -28,28 +19,41 @@ torch::Tensor MNISTDataset::read_data(const std::string &loc, bool isTrain)
     uint32_t magicNumber = read_int32(images);
     TORCH_CHECK(magicNumber == 2051, "Incorrect magic number in image file: ", magicNumber);
 
-    // Read dimensions
+    // Read image dimensions
     uint32_t numImages = read_int32(images);
-    uint32_t numRows = read_int32(images);
-    uint32_t numCols = read_int32(images);
+    uint32_t numRows   = read_int32(images);
+    uint32_t numCols   = read_int32(images);
 
     std::cout << "Reading " << numImages << " images of size " << numRows << "x" << numCols << std::endl;
 
-    // This converts images to tensors
-    // Allocate an empty tensor of size of image (count, channels, height, width)
-    auto tensor = torch::empty({numImages, 1, numRows, numCols}, torch::kByte);
+    // Read all raw data
+    std::vector<uint8_t> buffer(numImages * numRows * numCols);
+    images.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
 
-    // Read image and convert to tensor
-    images.read(reinterpret_cast<char *>(tensor.data_ptr()), tensor.numel());
+    // Clear and reserve space in data_ vector
+    data_.clear();
+    data_.reserve(numImages);
 
-    // Normalize the image from 0 to 255 to 0 to 1
-    return tensor.to(torch::kFloat32).div_(255);
+    // Fill data_ with 1x28x28 tensors
+    size_t imageSize = numRows * numCols;
+    for (size_t i = 0; i < numImages; ++i) {
+        auto img_tensor = torch::from_blob(
+            buffer.data() + i * imageSize,
+            {1, static_cast<long>(numRows), static_cast<long>(numCols)},
+            torch::kUInt8
+        ).clone().to(torch::kFloat32).div_(255);  // clone to own memory
+        //img_tensor = img_tensor .sub_(0.5).div_(0.5);
+        data_.push_back(img_tensor);
+    }
+
+    read_labels(loc, isTrain);
 }
 
-torch::Tensor MNISTDataset::read_labels(const std::string &loc, bool isTrain)
+void MNISTDataset::read_labels(const std::string loc, bool isTrain)
 {
-    std::string path = loc + (isTrain ? trainPrefix : testPrefix) + "-labels.idx1-ubyte";
-    // Read the labels
+    std::cout << "MNISTDataset::read_labels" << std::endl;
+    std::string path = loc + "/" + (isTrain ? trainPrefix : testPrefix) + "-labels.idx1-ubyte";
+
     std::ifstream targets(path, std::ios::binary);
     TORCH_CHECK(targets, "Error opening targets file at ", path);
 
@@ -62,10 +66,20 @@ torch::Tensor MNISTDataset::read_labels(const std::string &loc, bool isTrain)
 
     std::cout << "Reading " << numLabels << " labels" << std::endl;
 
-    // Allocate an empty tensor of size of number of labels
-    auto tensor = torch::empty(numLabels, torch::kByte);
+    // Read raw labels into a buffer
+    std::vector<uint8_t> buffer(numLabels);
+    targets.read(reinterpret_cast<char*>(buffer.data()), numLabels);
 
-    // Convert to tensor
-    targets.read(reinterpret_cast<char *>(tensor.data_ptr()), numLabels);
-    return tensor.to(torch::kInt64);
+    // Store each label as a scalar tensor in the vector
+    labels_.clear();
+    labels_.reserve(numLabels);
+
+    for (uint8_t val : buffer) {
+        labels_.push_back(torch::tensor(static_cast<int64_t>(val), torch::kInt64));
+    }
+}
+
+torch::Tensor MNISTDataset::get_sample(size_t index)
+{
+    return data_[index];
 }
