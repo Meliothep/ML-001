@@ -7,6 +7,16 @@
 #include "DataExport.h"
 #include <vector>
 
+struct Hypermeters {
+    int64_t batch_size = 64;
+    int64_t epochs = 10;
+    double  lr = 0.001;
+    double  mom = 0.9;
+    double weight_decay = 0;
+    int patience = 3;
+    double min_delta = 0.001;
+};
+
 template<typename Model, typename Dataset>
 class ModelTrainer {
 public:
@@ -17,7 +27,7 @@ public:
     virtual ~ModelTrainer() = default;
 
     /// Runs full training/testing loop and exports data.
-    int start();
+    int start(Hypermeters hypermeters);
 
     /// Saves model weights to `<model_name>.pt`
     void save();

@@ -9,6 +9,9 @@
 
 #include "ChestXRayDataset.h"
 #include "ChestXRayCNN.h"
+
+#include "ChestXRayResNet.h"
+
 #include "DataExport.h"
 #include "ModelTrainer.h"
 #include "Logger.h"
@@ -31,10 +34,20 @@ int main(int argc, char* argv[]) {
     std::shared_ptr<ParquetDataExporter> parquet_data_exporter(
         new ParquetDataExporter(argv[2], logger));
 
-    std::shared_ptr<ModelTrainer<ChestXRayCNN,ChestXRayDataset>> trainer(
-        new ModelTrainer<ChestXRayCNN,ChestXRayDataset>(argv[1], parquet_data_exporter ,logger));
+    std::shared_ptr<ModelTrainer<ChestXRayResNet,ChestXRayDataset>> trainer(
+        new ModelTrainer<ChestXRayResNet,ChestXRayDataset>(argv[1], parquet_data_exporter ,logger));
 
-    trainer->start();
+    Hypermeters hypermeters = {
+        32,      // batch_size
+        15,      // num_epochs
+        0.0001,  // learning_rate
+        0.9,     // momentum
+        1e-4,     // weight_decay
+        5,       // patience (increase from 3 to 5)
+        0.01      // min_delta
+    };
+
+    trainer->start(hypermeters);
     trainer->save();
 
     return 0;

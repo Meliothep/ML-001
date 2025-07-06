@@ -42,7 +42,7 @@ void MNISTDataset::read_data(const std::string loc, bool isTrain)
             {1, static_cast<long>(numRows), static_cast<long>(numCols)},
             torch::kUInt8
         ).clone().to(torch::kFloat32).div_(255);  // clone to own memory
-        //img_tensor = img_tensor .sub_(0.5).div_(0.5);
+        //img_tensor = img_tensor .sub_(0.5).div_(0.5);  //Normalize
         data_.push_back(img_tensor);
     }
 
