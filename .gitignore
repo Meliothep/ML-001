@@ -58,3 +58,4 @@ bin/*
 test/test_runner
 
 datas/chest_Xray/
+notebook/.ipynb_checkpoints
