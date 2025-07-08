@@ -6,17 +6,20 @@
 #include <variant>
 
 #include <torch/torch.h>
-
-#include "ChestXRayDataset.h"
-#include "ChestXRayCNN.h"
-
-#include "ChestXRayResNet.h"
+#include <opencv2/opencv.hpp>
 
 #include "DataExport.h"
 #include "ModelTrainer.h"
 #include "Logger.h"
 #include "ParquetExport.h"
-#include <opencv2/opencv.hpp>
+
+#include "ChestXRayDataset.h"
+
+#include "models/ChestXRayCNN.h"
+#include "models/ChestXRayResNet.h"
+#include "models/ChestXRaySVM.h"
+#include "models/ChestXRaySvmRFF.h"
+#include "models/ChestXRayMLPSVM.h"
 
 using namespace cv;
 
@@ -34,12 +37,12 @@ int main(int argc, char* argv[]) {
     std::shared_ptr<ParquetDataExporter> parquet_data_exporter(
         new ParquetDataExporter(argv[2], logger));
 
-    std::shared_ptr<ModelTrainer<ChestXRayResNet,ChestXRayDataset>> trainer(
-        new ModelTrainer<ChestXRayResNet,ChestXRayDataset>(argv[1], parquet_data_exporter ,logger));
+    std::shared_ptr<ModelTrainer<ChestXRayMLPSVM,ChestXRayDataset>> trainer(
+        new ModelTrainer<ChestXRayMLPSVM,ChestXRayDataset>(argv[1], parquet_data_exporter ,logger));
 
     Hypermeters hypermeters = {
         32,      // batch_size
-        15,      // num_epochs
+        10,      // num_epochs
         0.0001,  // learning_rate
         0.9,     // momentum
         1e-4,     // weight_decay

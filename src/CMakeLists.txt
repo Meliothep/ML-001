@@ -20,8 +20,8 @@ find_package(OpenCV REQUIRED)
 
 add_subdirectory(mllogic)
 
-file(GLOB SOURCES "*.cpp")
-file(GLOB HEADERS "*.h" "*.hpp")
+file(GLOB SOURCES "*.cpp" "models/*.cpp")
+file(GLOB HEADERS "*.h" "*.hpp" "models/*.h" "models/*.hpp")
 add_executable(ML001 ${SOURCES} ${HEADERS})
 
 add_compile_definitions(NOMINMAX)

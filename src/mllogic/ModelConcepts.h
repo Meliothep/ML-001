@@ -19,6 +19,12 @@ struct Embeddable {
     virtual torch::Tensor get_embedding() const = 0;
 };
 
+struct Preprocessable {
+    virtual ~Preprocessable() = default;
+    virtual torch::Tensor preprocess() const = 0;
+};
+
+
 
 
 #endif //MODELCONCEPTS_H
